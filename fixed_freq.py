@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy import fftpack
 from scipy import signal
+from scipy.io import wavfile
 import tkinter as tk
 from tkinter import ttk
 import pyaudio
@@ -16,13 +17,14 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import sounddevice as sd
 
 # GLOBAL PARAMETERS
 LARGE_FONT = ("Verdana", 12)
 # sample params
 SAMPLING_RATE = 44100
-DURATION = 1.0
-NUM_SAMPLES_TO_PLOT = 200
+DURATION = 2.0
+NUM_SAMPLES_TO_PLOT = 1000
 # freq params
 OCTAVE_SIZE = 4
 MIN_FREQ = 440 / math.pow(2, OCTAVE_SIZE/2)
@@ -34,7 +36,7 @@ LOWPASS_FREQ = 200
 HIGHPASS_FREQ = 800
 BANDPASS_FREQ = [200, 800]
 # fft params
-FFT_MAX_FREQ = 2500
+FFT_MAX_FREQ = 2000
 
 class FixedFrequencyPlayer(tk.Tk):
 
@@ -137,7 +139,7 @@ class StartPage(tk.Frame):
         self.duration = DURATION # 1 Second
 
         self.n = np.arange(self.sampling_rate * self.duration)
-        self.time_axis = self.n / (self.sampling_rate * self.duration)
+        self.time_axis = self.n / self.sampling_rate
 
         self.canvas = FigureCanvasTkAgg(self.f, self)
         self.canvas.draw()
@@ -186,21 +188,12 @@ class StartPage(tk.Frame):
         # self.canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         # self.canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-    def add_noise(self, samples):
+    def add_noise(self):
         # Choose noise type
-        if self.noise_type == 'none':
-            return samples
-        elif self.noise_type == 'white':
-            noise = self.white_noise()
+        if self.noise_type == 'white':
+            self.samples += self.white_noise()
         elif self.noise_type == 'pink':
-            noise = self.pink_noise()
-
-        # Add noise to samples
-        samples += noise
-
-        # TODO: Normalize to maximum value of 1 (?)
-        # samples /= self.samples.max()
-        return samples
+            self.samples += self.pink_noise()
 
     def white_noise(self):
         return self.noise_ampl * (np.random.random(int(self.sampling_rate * self.duration))*2-1).astype(np.float32)
@@ -248,38 +241,35 @@ class StartPage(tk.Frame):
         self.text_n.configure(text=('Noise amplitude = ' + str(self.noise_ampl)))
         self.update_graph_handler()
 
-    def add_filter(self, samples):
+    def add_filter(self):
         if self.filter_type == 'lowpass':
-            return self.lowpass_filter(samples)
+            self.lowpass_filter()
         elif self.filter_type == 'highpass':
-            return self.highpass_filter(samples)
+            self.highpass_filter()
         elif self.filter_type == 'bandpass':
-            return self.bandpass_filter(samples)
+            self.bandpass_filter()
 
-        return samples
-
-    def lowpass_filter(self, xn):
+    def lowpass_filter(self):
         nyq = self.sampling_rate * 0.5
-        low = LOWPASS_FREQ / nyq
+        low = self.low_cutoff / nyq
         b, a = signal.butter(FILTER_ORDER, low, btype='lowpass')
-        y = signal.filtfilt(b, a, xn)
-        return y
+        y = signal.filtfilt(b, a, self.samples)
+        self.samples = y
 
-    def highpass_filter(self, xn):
+    def highpass_filter(self):
         nyq = self.sampling_rate * 0.5
-        high = HIGHPASS_FREQ / nyq
+        high = self.high_cutoff / nyq
         b, a = signal.butter(FILTER_ORDER, high, btype='highpass')
-        y = signal.filtfilt(b, a, xn)
-        return y
+        y = signal.filtfilt(b, a, self.samples)
+        self.samples = y
 
-    def bandpass_filter(self, xn):
+    def bandpass_filter(self):
         nyq = self.sampling_rate * 0.5
-        band = [tmp / nyq for tmp in BANDPASS_FREQ]
-        b, a = signal.butter(FILTER_ORDER, band, btype='band')
-        y = signal.filtfilt(b, a, xn)
-        # print(xn[:20])
-        # print(y[:20])
-        return y
+        low = self.low_cutoff / nyq
+        high = self.high_cutoff / nyq
+        b, a = signal.butter(FILTER_ORDER, [low, high], btype='band')
+        y = signal.filtfilt(b, a, self.samples)
+        self.samples = y
 
     def update_filter_type(self, t):
         self.filter_type=t
@@ -298,12 +288,23 @@ class StartPage(tk.Frame):
         self.text_a.configure(text=('Amplitude a = ' + str(self.ampl)))
         self.update_graph_handler()
 
+    def normalize_samples(self):
+        if self.samples.max() != 0:
+            self.samples /= self.samples.max()
+
+    def save_to_wav(self):
+        data = np.iinfo(np.int16).max * self.samples
+        samplerate = self.sampling_rate
+        wavfile.write("fixed_freq.wav", samplerate, data)
+
     def update_graph_handler(self):
         # update samples
         # self.samples = np.zeros(SAMPLING_RATE*DURATION)
         self.samples = self.ampl * np.sin(2 * np.pi * self.freq * self.time_axis).astype(np.float32)
-        self.samples = self.add_noise(self.samples)
-        self.samples = self.add_filter(self.samples)
+        self.add_noise()
+        self.add_filter()
+        self.normalize_samples()
+        # self.save_to_wav()
         self.update_graph()
 
     def update_graph(self):
@@ -316,23 +317,28 @@ class StartPage(tk.Frame):
         self.a.set_ylabel('Amplitude')
 
         self.fft.clear()
+        self.fft.set_title('Frequency Domain Plot')
+
         if self.ampl != 0:
-            yf = fftpack.fft(self.samples)
+            yf = fftpack.fft(self.samples[:self.sampling_rate])
             # d = len(yf)//2
             # self.fft.plot(abs(yf[:(d-1)]))
 
             # https://stackoverflow.com/questions/25735153/plotting-a-fast-fourier-transform-in-python
             # truncate the FFT
-            yf = yf[:FFT_MAX_FREQ*2]
+            d = len(yf) // 2
+            yf = yf[:d-1]
             yp = np.abs(yf) ** 2
-            fft_freq = fftpack.fftfreq(len(yp), 1/(FFT_MAX_FREQ*2))
-            i = fft_freq>0
+            fft_freq = fftpack.fftfreq(len(yp), 1/len(yp))
+            i = (fft_freq>0)[:FFT_MAX_FREQ]
+            fft_freq = fft_freq[:FFT_MAX_FREQ]
+            yp = yp[:FFT_MAX_FREQ]
             self.fft.plot(fft_freq[i], 10*np.log10(yp[i]))
-            self.fft.set_xlabel('Frequency Hz')
+            self.fft.set_xlabel('Frequency (Hz)')
             self.fft.set_ylabel('PSD (dB)')
 
-        self.fft.set_title('Frequency Domain Plot')
         self.canvas.draw()
+        sd.play(self.samples, self.sampling_rate)
 
 if __name__ == "__main__":
     app = FixedFrequencyPlayer()

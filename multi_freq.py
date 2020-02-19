@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from scipy import fftpack
 from scipy import signal
+from scipy.io import wavfile
 import tkinter as tk
 from tkinter import ttk
 import pyaudio
@@ -16,19 +17,20 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg, NavigationToolb
 from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
+import sounddevice as sd
 
 # GLOBAL PARAMETERS
 LARGE_FONT = ("Verdana", 12)
 # sample params
 SAMPLING_RATE = 44100
-DURATION = 1.0
+DURATION = 2.0
 NUM_SAMPLES_TO_PLOT = 1000
 # filter params
 FILTER_ORDER = 3
 LOWPASS_FREQ = 200
 HIGHPASS_FREQ = 800
 # fft params
-FFT_MAX_FREQ = 2500
+FFT_MAX_FREQ = 2000
 
 class MultiFrequencyPlayer(tk.Tk):
 
@@ -125,11 +127,13 @@ class StartPage(tk.Frame):
         self.low_cutoff = LOWPASS_FREQ
         self.high_cutoff = HIGHPASS_FREQ
         self.sampling_rate = SAMPLING_RATE # Hz
-        self.duration = DURATION # 1 Second
+        self.duration = DURATION # second
 
         # OTHER STUFF
         self.n = np.arange(self.sampling_rate * self.duration)
-        self.time_axis = self.n / (self.sampling_rate * self.duration)
+        self.time_axis = self.n / self.sampling_rate
+        print(self.n)
+        print(self.time_axis)
 
         self.canvas = FigureCanvasTkAgg(self.f, self)
         self.canvas.draw()
@@ -154,7 +158,7 @@ class StartPage(tk.Frame):
         self.text_low_cutoff.grid(row=5, column=6, columnspan=2)
         self.text_high_cutoff.grid(row=5, column=8, columnspan=2)
         self.button_update_cutoff.grid(row=5, column=11, columnspan=3)
-        
+
         self.filter_n_btn.grid(row=6, column=0, columnspan=3)
         self.filter_l_btn.grid(row=6, column=3, columnspan=3)
         self.filter_h_btn.grid(row=6, column=6, columnspan=3)
@@ -163,21 +167,12 @@ class StartPage(tk.Frame):
         self.canvas.get_tk_widget().grid(row=8, column=0, columnspan=13)
         self.canvas._tkcanvas.grid(row=9, column=0, columnspan=13)
 
-    def add_noise(self, samples):
+    def add_noise(self):
         # Choose noise type
-        if self.noise_type == 'none':
-            return samples
-        elif self.noise_type == 'white':
-            noise = self.white_noise()
+        if self.noise_type == 'white':
+            self.samples += self.white_noise()
         elif self.noise_type == 'pink':
-            noise = self.pink_noise()
-
-        # Add noise to samples
-        samples += noise
-
-        # TODO: Normalize to maximum value of 1 (?)
-        # samples /= self.samples.max()
-        return samples
+            self.samples += self.pink_noise()
 
     def white_noise(self):
         return self.noise_ampl * (np.random.random(int(self.sampling_rate * self.duration))*2-1).astype(np.float32)
@@ -216,7 +211,7 @@ class StartPage(tk.Frame):
         return self.noise_ampl * ret
 
     def update_noise_type(self, t):
-        self.noise_type=t
+        self.noise_type = t
         self.text_ntype.configure(text='Noise type is '+t)
         self.update_graph_handler()
 
@@ -225,39 +220,35 @@ class StartPage(tk.Frame):
         self.text_n.configure(text=('amp = ' + str(self.noise_ampl)))
         self.update_graph_handler()
 
-    def add_filter(self, samples):
+    def add_filter(self):
         if self.filter_type == 'lowpass':
-            return self.lowpass_filter(samples)
+            self.lowpass_filter()
         elif self.filter_type == 'highpass':
-            return self.highpass_filter(samples)
+            self.highpass_filter()
         elif self.filter_type == 'bandpass':
-            return self.bandpass_filter(samples)
+            self.bandpass_filter()
 
-        return samples
-
-    def lowpass_filter(self, xn):
+    def lowpass_filter(self):
         nyq = self.sampling_rate * 0.5
         low = self.low_cutoff / nyq
         b, a = signal.butter(FILTER_ORDER, low, btype='lowpass')
-        y = signal.filtfilt(b, a, xn)
-        return y
+        y = signal.filtfilt(b, a, self.samples)
+        self.samples = y
 
-    def highpass_filter(self, xn):
+    def highpass_filter(self):
         nyq = self.sampling_rate * 0.5
         high = self.high_cutoff / nyq
         b, a = signal.butter(FILTER_ORDER, high, btype='highpass')
-        y = signal.filtfilt(b, a, xn)
-        return y
+        y = signal.filtfilt(b, a, self.samples)
+        self.samples = y
 
-    def bandpass_filter(self, xn):
+    def bandpass_filter(self):
         nyq = self.sampling_rate * 0.5
         low = self.low_cutoff / nyq
         high = self.high_cutoff / nyq
         b, a = signal.butter(FILTER_ORDER, [low, high], btype='band')
-        y = signal.filtfilt(b, a, xn)
-        # print(xn[:20])
-        # print(y[:20])
-        return y
+        y = signal.filtfilt(b, a, self.samples)
+        self.samples = y
 
     def update_filter_type(self, t):
         self.filter_type=t
@@ -283,22 +274,32 @@ class StartPage(tk.Frame):
 
     def update_volume(self, v):
         self.volume = v
-        print(self.volume)
 
     def update_graph_ampl(self, a, i):
         # update amplitudes
         self.ampl[i] = float(a)
         self.update_graph_handler()
 
+    def normalize_samples(self):
+        if self.samples.max() != 0:
+            self.samples /= self.samples.max()
+
+    def save_to_wav(self):
+        data = np.iinfo(np.int16).max * self.samples
+        samplerate = self.sampling_rate
+        wavfile.write("multi_freq.wav", samplerate, data)
+
     def update_graph_handler(self):
         # update samples
-        self.samples = np.zeros(int(SAMPLING_RATE*DURATION)).astype(np.float32)
+        self.samples = np.zeros(int(self.sampling_rate*self.duration)).astype(np.float32)
         for i in range(13):
             self.samples += self.ampl[i] * np.sin(2 * np.pi * self.freq[i] * self.time_axis).astype(np.float32)
         if any(a > 0.0 for a in self.ampl):
             self.samples /= self.samples.max() # normalize
-        self.samples = self.add_noise(self.samples)
-        self.samples = self.add_filter(self.samples)
+        self.add_noise()
+        self.add_filter()
+        self.normalize_samples()
+        # self.save_to_wav()
         self.update_graph()
 
     def update_graph(self):
@@ -311,32 +312,31 @@ class StartPage(tk.Frame):
         self.a.set_ylabel('Amplitude')
 
         self.fft.clear()
+        self.fft.set_title('Frequency Domain Plot')
+
         if any(s > 0.0 for s in self.samples):
-            yf = fftpack.fft(self.samples)
+            yf = fftpack.fft(self.samples[:self.sampling_rate])
             # d = len(yf)//2
             # self.fft.plot(abs(yf[:(d-1)]))
 
             # https://stackoverflow.com/questions/25735153/plotting-a-fast-fourier-transform-in-python
             # truncate the FFT
-            yf = yf[:FFT_MAX_FREQ*2]
+            d = len(yf) // 2
+            yf = yf[:d-1]
             yp = np.abs(yf) ** 2
-            fft_freq = fftpack.fftfreq(len(yp), 1/(FFT_MAX_FREQ*2))
-            i = fft_freq>0
+            fft_freq = fftpack.fftfreq(len(yp), 1/len(yp))
+            i = (fft_freq>0)[:FFT_MAX_FREQ]
+            fft_freq = fft_freq[:FFT_MAX_FREQ]
+            yp = yp[:FFT_MAX_FREQ]
             self.fft.plot(fft_freq[i], 10*np.log10(yp[i]))
-            self.fft.set_xlabel('Frequency Hz')
+            self.fft.set_xlabel('Frequency (Hz)')
             self.fft.set_ylabel('PSD (dB)')
 
-        self.fft.set_title('Frequency Domain Plot')
         self.canvas.draw()
+        sd.play(self.samples, self.sampling_rate)
 
     def update_random(self):
         for i in range(13):
-            # offset = (random.random()*2-1) * 0.5
-            # self.ampl[i] += offset
-            # if self.ampl[i] > 1.0:
-            #     self.ampl[i] = 1.0
-            # elif self.ampl[i] < 0.0:
-            #     self.ampl[i] = 0.0
             self.amplitude_sliders[i].set(random.random())
 
 if __name__ == "__main__":
