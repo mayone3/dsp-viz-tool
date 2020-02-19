@@ -27,8 +27,9 @@ DURATION = 2.0
 NUM_SAMPLES_TO_PLOT = 1000
 # filter params
 FILTER_ORDER = 3
-LOWPASS_FREQ = 200
-HIGHPASS_FREQ = 800
+LOWPASS_FREQ = 440
+HIGHPASS_FREQ = 880
+WINDOW_SIZE = 51
 # fft params
 FFT_MAX_FREQ = 2000
 
@@ -73,6 +74,20 @@ class StartPage(tk.Frame):
         self.amplitude_sliders[3].set(1.0)
         self.amplitude_sliders[7].set(1.0)
         self.amplitude_sliders[12].set(1.0)
+        self.note_labels = []
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='A'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='A#'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='B'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='C'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='C#'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='D'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='D#'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='E'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='F'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='F#'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='G'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='G#'))
+        self.note_labels.append(tk.Label(self, font=LARGE_FONT, text='A'))
 
         # Noise Type Buttons
         self.text_ntype = tk.Label(self, font=LARGE_FONT, text=('Noise type is none'))
@@ -112,6 +127,8 @@ class StartPage(tk.Frame):
                                      command=lambda:self.update_filter_type("highpass"))
         self.filter_b_btn = tk.Button(self, text="BANDPASS",
                                      command=lambda:self.update_filter_type("bandpass"))
+        self.filter_s_btn = tk.Button(self, text="SMOOTHING",
+                                     command=lambda:self.update_filter_type("smoothing"))
 
         # Some internal states
         self.samples = np.zeros((200, 1))
@@ -132,8 +149,8 @@ class StartPage(tk.Frame):
         # OTHER STUFF
         self.n = np.arange(self.sampling_rate * self.duration)
         self.time_axis = self.n / self.sampling_rate
-        print(self.n)
-        print(self.time_axis)
+        # print(self.n)
+        # print(self.time_axis)
 
         self.canvas = FigureCanvasTkAgg(self.f, self)
         self.canvas.draw()
@@ -143,36 +160,40 @@ class StartPage(tk.Frame):
         self.text_a.grid(row=1, column=0, columnspan=14)
         for i in range(13):
             self.amplitude_sliders[i].grid(row=2, column=i, columnspan=1)
+            self.note_labels[i].grid(row=3, column=i, columnspan=1)
 
-        self.text_ntype.grid(row=3, column=0, columnspan=6)
-        self.noise_n_btn.grid(row=4, column=0, columnspan=2)
-        self.noise_w_btn.grid(row=4, column=2, columnspan=2)
-        self.noise_p_btn.grid(row=4, column=4, columnspan=2)
+        self.text_ntype.grid(row=4, column=0, columnspan=6)
+        self.noise_n_btn.grid(row=5, column=0, columnspan=2)
+        self.noise_w_btn.grid(row=5, column=2, columnspan=2)
+        self.noise_p_btn.grid(row=5, column=4, columnspan=2)
 
-        self.text_n.grid(row=3, column=6, columnspan=3)
-        noise_slider.grid(row=3, column=9, columnspan=5)
-        text_volume.grid(row=4, column=6, columnspan=3)
-        volume_slider.grid(row=4, column=9, columnspan=5)
+        self.text_n.grid(row=4, column=6, columnspan=3)
+        noise_slider.grid(row=4, column=9, columnspan=4)
+        text_volume.grid(row=5, column=6, columnspan=3)
+        volume_slider.grid(row=5, column=9, columnspan=4)
 
-        self.text_ftype.grid(row=5, column=0, columnspan=6)
-        self.text_low_cutoff.grid(row=5, column=6, columnspan=2)
-        self.text_high_cutoff.grid(row=5, column=8, columnspan=2)
-        self.button_update_cutoff.grid(row=5, column=11, columnspan=3)
+        self.text_ftype.grid(row=6, column=0, columnspan=5)
+        self.text_low_cutoff.grid(row=6, column=5, columnspan=2)
+        self.text_high_cutoff.grid(row=6, column=7, columnspan=2)
+        self.button_update_cutoff.grid(row=6, column=9, columnspan=3)
 
-        self.filter_n_btn.grid(row=6, column=0, columnspan=3)
-        self.filter_l_btn.grid(row=6, column=3, columnspan=3)
-        self.filter_h_btn.grid(row=6, column=6, columnspan=3)
-        self.filter_b_btn.grid(row=6, column=9, columnspan=3)
-        random_button.grid(row=7, column=0, columnspan=13)
-        self.canvas.get_tk_widget().grid(row=8, column=0, columnspan=13)
-        self.canvas._tkcanvas.grid(row=9, column=0, columnspan=13)
+        self.filter_n_btn.grid(row=7, column=0, columnspan=4)
+        self.filter_l_btn.grid(row=7, column=4, columnspan=4)
+        self.filter_h_btn.grid(row=7, column=8, columnspan=4)
+        self.filter_b_btn.grid(row=8, column=2, columnspan=4)
+        self.filter_s_btn.grid(row=8, column=6, columnspan=4)
+        random_button.grid(row=9, column=0, columnspan=13)
+        self.canvas.get_tk_widget().grid(row=10, column=0, columnspan=13)
+        self.canvas._tkcanvas.grid(row=11, column=0, columnspan=13)
 
     def add_noise(self):
         # Choose noise type
         if self.noise_type == 'white':
+            # print(np.mean(signal.welch(self.white_noise())))
             self.samples += self.white_noise()
         elif self.noise_type == 'pink':
-            self.samples += self.pink_noise()
+            # print(np.mean(signal.welch(self.pink_noise() * 10)))
+            self.samples += self.pink_noise() * 10
 
     def white_noise(self):
         return self.noise_ampl * (np.random.random(int(self.sampling_rate * self.duration))*2-1).astype(np.float32)
@@ -227,6 +248,8 @@ class StartPage(tk.Frame):
             self.highpass_filter()
         elif self.filter_type == 'bandpass':
             self.bandpass_filter()
+        elif self.filter_type == 'smoothing':
+            self.smoothing_filter()
 
     def lowpass_filter(self):
         nyq = self.sampling_rate * 0.5
@@ -248,6 +271,10 @@ class StartPage(tk.Frame):
         high = self.high_cutoff / nyq
         b, a = signal.butter(FILTER_ORDER, [low, high], btype='band')
         y = signal.filtfilt(b, a, self.samples)
+        self.samples = y
+
+    def smoothing_filter(self):
+        y = signal.savgol_filter(self.samples, WINDOW_SIZE, FILTER_ORDER)
         self.samples = y
 
     def update_filter_type(self, t):
