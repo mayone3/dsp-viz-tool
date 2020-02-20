@@ -141,7 +141,7 @@ class StartPage(tk.Frame):
             yf = yf[:d-1]
             yp = np.abs(yf) ** 2
             fft_freq = fftpack.fftfreq(len(yp), 1/len(yp))
-            i = (fft_freq>0)[:FFT_MAX_FREQ]
+            i = (fft_freq[:FFT_MAX_FREQ]>0)
             fft_freq = fft_freq[:FFT_MAX_FREQ]
             yp = yp[:FFT_MAX_FREQ]
             self.fm_fft.plot(fft_freq[i], 10*np.log10(yp[i]))
