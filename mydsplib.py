@@ -116,7 +116,7 @@ def fm(sample_baseband, ts, f_m, f_c, f_dev):
     Therefore,
         y(t) = cos( 2*pi * f_c * t + ( f_dev / f_m ) * sin( 2*pi * f_m * t ) )
     '''
-    return np.cos( 2*np.pi * f_c * ts + (f_dev / f_m) * np.sin( 2*pi * f_m * ts ) ).astyle(np.float32)
+    return np.cos( 2*np.pi * f_c * ts + (f_dev / f_m) * np.sin( 2*np.pi * f_m * ts ) ).astype(np.float32)
 
 def normalize_sample(sample):
     if sample.max() != 0:

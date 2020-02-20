@@ -34,7 +34,7 @@ class AmplitudeModulationPlayer(tk.Tk):
     def __init__(self, *args, **kwargs):
         # Make a basic tkinter page
         tk.Tk.__init__(self, *args, **kwargs)
-        tk.Tk.wm_title(self, "Fixed Frequency Player")
+        tk.Tk.wm_title(self, "AM Player")
         container = tk.Frame(self)
         container.grid(row=0, column=0, sticky="nsew")
 

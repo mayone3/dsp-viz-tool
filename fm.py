@@ -34,7 +34,7 @@ class FrequencyModulationPlayer(tk.Tk):
     def __init__(self, *args, **kwargs):
         # Make a basic tkinter page
         tk.Tk.__init__(self, *args, **kwargs)
-        tk.Tk.wm_title(self, "Fixed Frequency Player")
+        tk.Tk.wm_title(self, "FM Player")
         container = tk.Frame(self)
         container.grid(row=0, column=0, sticky="nsew")
 
@@ -112,7 +112,7 @@ class StartPage(tk.Frame):
     def update_graph(self):
         self.baseband.clear()
         self.baseband.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.samples[0][:NUM_SAMPLES_TO_PLOT])
-        self.baseband.set_title('Data Wave in Time Domain')
+        self.baseband.set_title('Baseband Wave in Time Domain')
         self.baseband.set_xlabel('Time (s)')
         self.baseband.set_ylabel('Amplitude')
 
@@ -124,12 +124,12 @@ class StartPage(tk.Frame):
 
         self.fm.clear()
         self.fm.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.samples[2][:NUM_SAMPLES_TO_PLOT])
-        self.fm.set_title('AM Wave in Time Domain')
+        self.fm.set_title('FM Wave in Time Domain')
         self.fm.set_xlabel('Time (s)')
         self.fm.set_ylabel('Amplitude')
 
         self.fm_fft.clear()
-        self.fm_fft.set_title('AM Wave in Frequency Domain')
+        self.fm_fft.set_title('FM Wave in Frequency Domain')
         self.fm_fft.set_xlabel('Frequency (Hz)')
         self.fm_fft.set_ylabel('PSD (dB)')
 
