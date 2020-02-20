@@ -92,6 +92,13 @@ def bandpass_filter(sample, band, sample_rate, filter_order):
 def smoothing_filter(sample, window_size, filter_order):
     return signal.savgol_filter(sample, window_size, filter_order)
 
+def am(sample_data, sample_carrier):
+    return (sample_data+1) * sample_carrier
+
+def fm(sample_baseband, freq_carrier, freq_modulator):
+    # return am(sample_data, sample_carrier)
+    y = sin(2*np.pi*)
+
 def normalize_sample(sample):
     if sample.max() != 0:
         sample /= sample.max()

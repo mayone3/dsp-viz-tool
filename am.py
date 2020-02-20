@@ -26,20 +26,10 @@ LARGE_FONT = ("Verdana", 12)
 SAMPLE_RATE = 44100
 DURATION = 2.0
 NUM_SAMPLES_TO_PLOT = 1000
-# freq params
-OCTAVE_SIZE = 4
-MIN_FREQ = 440 / math.pow(2, OCTAVE_SIZE/2)
-MAX_FREQ = 440 * math.pow(2, OCTAVE_SIZE/2)
-DEFAULT_FREQ = math.log(440/MIN_FREQ, 2)
-# filter params
-FILTER_ORDER = 3
-CUTOFF = 1000
-BAND = [440, 880]
-WINDOW_SIZE = 51
 # fft params
 FFT_MAX_FREQ = 2000
 
-class FixedFrequencyPlayer(tk.Tk):
+class AmplitudeModulationPlayer(tk.Tk):
 
     def __init__(self, *args, **kwargs):
         # Make a basic tkinter page
@@ -63,82 +53,34 @@ class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
         # Initialize Plots
-        self.f, (self.a, self.fft) = plt.subplots(2, 2, figsize=(5, 6))
-        self.f.tight_layout(pad=4.0)
-        self.a.set(xlim=(0,0.010), ylim=(-1,1))
+        self.figure, ((self.data, self.carrier), (self.am, self.am_fft)) = plt.subplots(2, 2, figsize=(16, 6))
+        self.figure.tight_layout(pad=4.0)
 
         tk.Frame.__init__(self, parent)
-        label = tk.Label(self, text="Fixed Frequency Player!", font=LARGE_FONT)
+        label = tk.Label(self, text="Amplitude Modulation!", font=LARGE_FONT)
 
-        # Amplitude Slider
-        self.text_a = tk.Label(self, font=LARGE_FONT)
-        amplitude_slider = tk.Scale(self, orient=tk.HORIZONTAL,
-                             from_=0, to=1, digits=3,
-                             resolution=0.01, showvalue=False,
-                             command=self.update_ampl)
-        amplitude_slider.set(0.5)
+        # Frequency Sliders
+        self.text_df = tk.Label(self, font=LARGE_FONT, text='Data Frequency')
+        self.text_cf = tk.Label(self, font=LARGE_FONT, text='Carrier Frequency')
+        frequency_sliders = []
+        frequency_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=0, to=400, digits=3, resolution=20, showvalue=True, command=lambda f: self.update_freq(f, 0)))
+        frequency_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=0, to=2000, digits=3, resolution=100, showvalue=True, command=lambda f: self.update_freq(f, 1)))
+        frequency_sliders[0].set(200)
+        frequency_sliders[1].set(1000)
 
-        # Frequency Slider
-        self.text_f = tk.Label(self, font=LARGE_FONT)
-        frequency_slider = tk.Scale(self, orient=tk.HORIZONTAL,
-                                 from_=0, to=OCTAVE_SIZE, digit=3,
-                                 resolution=1/24, showvalue=False,
-                                 command=self.update_freq)
-        frequency_slider.set(DEFAULT_FREQ)
-
-        # Noise Dropdown
-        # noise_dropdown = tk.StringVar(self)
-        # noise_choices = {'None', 'White', 'Pink (power = 1/f)'}
-        # noise_dropdown.set('None')
-        #
-        # noise_menu = tk.OptionMenu(parent, self, *noise_choices)
-        # noise_menu.pack()
-
-        # Noise Type Buttons
-        self.text_ntype = tk.Label(self, font=LARGE_FONT, text=('Noise type is none'))
-        self.noise_n_btn = tk.Button(self, text="NONE",
-                                     command=lambda:self.update_noise_type("none"))
-        self.noise_w_btn = tk.Button(self, text="WHITE",
-                                     command=lambda:self.update_noise_type("white"))
-        self.noise_p_btn = tk.Button(self, text="PINK",
-                                     command=lambda:self.update_noise_type("pink"))
-
-        # Noise Amplitude Slider
-        self.text_n = tk.Label(self, font=LARGE_FONT)
-        noise_slider = tk.Scale(self, orient=tk.HORIZONTAL,
-                         from_=0, to=1, digits=3,
-                         resolution=0.01, showvalue=False,
-                         command=self.update_noise_ampl)
-        noise_slider.set(0.5)
-
-        # Filter buttons
-        self.text_ftype = tk.Label(self, font=LARGE_FONT, text=('Filter type is none'))
-        self.filter_n_btn = tk.Button(self, text="NONE",
-                                     command=lambda:self.update_filter_type("none"))
-        self.filter_l_btn = tk.Button(self, text="LOWPASS",
-                                     command=lambda:self.update_filter_type("lowpass"))
-        self.filter_h_btn = tk.Button(self, text="HIGHPASS",
-                                     command=lambda:self.update_filter_type("highpass"))
-        self.filter_b_btn = tk.Button(self, text="BANDPASS",
-                                     command=lambda:self.update_filter_type("bandpass"))
-        self.filter_s_btn = tk.Button(self, text="SMOOTHING",
-                                     command=lambda:self.update_filter_type("smoothing"))
-
-        # Uncomment this if you want a toolbar at the bottom.
-        #toolbar = NavigationToolbar2Tk(self.canvas, self)
-        #toolbar.update()
+        # Amplitude Sliders
+        self.text_da = tk.Label(self, font=LARGE_FONT, text='Data Amplitude')
+        self.text_ca = tk.Label(self, font=LARGE_FONT, text='Carrier Amplitude')
+        amplitude_sliders = []
+        amplitude_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=0, to=1, digits=2, resolution=0.1, showvalue=True, command=lambda a: self.update_ampl(a, 0)))
+        amplitude_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=0, to=1, digits=2, resolution=0.1, showvalue=True, command=lambda a: self.update_ampl(a, 1)))
+        amplitude_sliders[0].set(0.5)
+        amplitude_sliders[1].set(0.5)
 
         # Some internal states
-        self.sample = np.zeros((200, 1))
-        self.noise_type = 'none'
-        self.noise_ampl = 0.5
-        self.filter_type = 'none'
-        self.ampl = amplitude_slider.get()
-        self.freq = MIN_FREQ * 2**frequency_slider.get()
-        self.cutoff = CUTOFF
-        self.band = BAND
-        self.filter_order = FILTER_ORDER
-        self.window_size = WINDOW_SIZE
+        self.samples = [np.zeros((200, 1)), np.zeros((200, 1)), np.zeros((200, 1))]
+        self.a = [amplitude_sliders[0].get(), amplitude_sliders[1].get()]
+        self.f = [frequency_sliders[0].get(), frequency_sliders[1].get()]
         self.sample_rate = SAMPLE_RATE # Hz
         self.duration = DURATION # 1 Second
 
@@ -146,92 +88,68 @@ class StartPage(tk.Frame):
         self.n = np.arange(self.sample_rate * self.duration)
         self.time_axis = self.n / self.sample_rate
 
-        self.canvas = FigureCanvasTkAgg(self.f, self)
+        self.canvas = FigureCanvasTkAgg(self.figure, self)
         self.canvas.draw()
 
         # GRIDS
-        label.grid(row=0, column=0, columnspan=4)
-        self.text_a.grid(row=1, column=0, columnspan=2)
-        amplitude_slider.grid(row=1, column=2, columnspan=2)
-        self.text_f.grid(row=2, column=0, columnspan=2)
-        frequency_slider.grid(row=2, column=2, columnspan=2)
-        self.text_n.grid(row=3, column=0, columnspan=2)
-        noise_slider.grid(row=3, column=2, columnspan=2)
-        self.text_ntype.grid(row=4, column=0, columnspan=4)
-        self.noise_n_btn.grid(row=5, column=0, columnspan=1)
-        self.noise_w_btn.grid(row=5, column=1, columnspan=1)
-        self.noise_p_btn.grid(row=5, column=2, columnspan=1)
-        self.text_ftype.grid(row=6, column=0, columnspan=4)
-        self.filter_n_btn.grid(row=7, column=0, columnspan=1)
-        self.filter_l_btn.grid(row=7, column=1, columnspan=1)
-        self.filter_h_btn.grid(row=7, column=2, columnspan=1)
-        self.filter_b_btn.grid(row=8, column=0, columnspan=1)
-        self.filter_s_btn.grid(row=8, column=1, columnspan=1)
-        self.canvas.get_tk_widget().grid(row=9, column=0, columnspan=4)
-        self.canvas._tkcanvas.grid(row=10, column=0, columnspan=4)
+        label.grid(row=0, column=0, columnspan=2)
+        self.text_df.grid(row=1, column=0, columnspan=1)
+        frequency_sliders[0].grid(row=2, column=0, columnspan=1)
+        self.text_da.grid(row=3, column=0, columnspan=1)
+        amplitude_sliders[0].grid(row=4, column=0, columnspan=1)
+        self.text_cf.grid(row=1, column=1, columnspan=1)
+        frequency_sliders[1].grid(row=2, column=1, columnspan=1)
+        self.text_ca.grid(row=3, column=1, columnspan=1)
+        amplitude_sliders[1].grid(row=4, column=1, columnspan=1)
 
-        # PACKS
-        # label.pack(pady=10,padx=10,expand=True)
-        # self.text_a.pack()
-        # amplitude_slider.pack()
-        # self.text_f.pack()
-        # frequency_slider.pack()
-        # self.noise_n_btn.pack()
-        # self.noise_w_btn.pack()
-        # self.noise_p_btn.pack()
-        # self.text_n.pack()
-        # noise_slider.pack()
-        # self.canvas.get_tk_widget().pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
-        # self.canvas._tkcanvas.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        self.canvas.get_tk_widget().grid(row=5, column=0, columnspan=2)
+        self.canvas._tkcanvas.grid(row=6, column=0, columnspan=2)
 
-    def update_noise_type(self, t):
-        self.noise_type=t
-        self.text_ntype.configure(text='Noise type is '+t)
+    def update_freq(self, f, index):
+        self.f[index] = float(f)
         self.update_graph_handler()
 
-    def update_noise_ampl(self, a):
-        self.noise_ampl = float(a)
-        self.text_n.configure(text=('Noise amplitude = ' + str(self.noise_ampl)))
-        self.update_graph_handler()
-
-    def update_filter_type(self, t):
-        self.filter_type=t
-        self.text_ftype.configure(text='Filter type is '+t)
-        self.update_graph_handler()
-
-    def update_freq(self, f):
-        self.freq = MIN_FREQ * 2**float(f)
-        self.text_f.configure(text=('Frequency f = ' + str(round(self.freq, 2))))
-        self.update_graph_handler()
-
-    def update_ampl(self, a):
-        self.ampl = float(a)
-        self.text_a.configure(text=('Amplitude a = ' + str(self.ampl)))
+    def update_ampl(self, a, index):
+        self.a[index] = float(a)
         self.update_graph_handler()
 
     def update_graph_handler(self):
-        # update sample
-        self.sample = self.ampl * np.sin(2*np.pi*self.freq*self.time_axis).astype(np.float32)
-        self.sample = mdl.add_noise(self.sample, self.noise_type, self.noise_ampl, self.sample_rate, self.duration)
-        self.sample = mdl.add_filter(self.sample, self.filter_type, self.cutoff, self.band, self.filter_order, self.window_size, self.sample_rate)
-        self.sample = mdl.normalize_sample(self.sample)
-        # mdl.save_to_wav(self.smaple, 'fixed.wav', self.sample_rate)
+        # update samples
+        self.samples[0] = self.a[0] * np.sin(2*np.pi*self.f[0]*self.time_axis).astype(np.float32)
+        self.samples[1] = self.a[1] * np.sin(2*np.pi*self.f[1]*self.time_axis).astype(np.float32)
+        self.samples[2] = mdl.am(self.samples[0], self.samples[1])
+        if self.samples[2].max() > 1.0:
+            self.samples[2] = mdl.normalize_sample(self.samples[2])
         self.update_graph()
 
     def update_graph(self):
-        self.a.clear()
-        self.a.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.sample[:NUM_SAMPLES_TO_PLOT])
-        self.a.set_title('Time Domain Plot')
-        self.a.set_xlabel('Time (s)')
-        self.a.set_ylabel('Amplitude')
+        self.data.clear()
+        self.data.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.samples[0][:NUM_SAMPLES_TO_PLOT])
+        self.data.set_title('Data Wave in Time Domain')
+        self.data.set_xlabel('Time (s)')
+        self.data.set_ylabel('Amplitude')
 
-        self.fft.clear()
-        self.fft.set_title('Frequency Domain Plot')
+        self.carrier.clear()
+        self.carrier.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.samples[1][:NUM_SAMPLES_TO_PLOT])
+        self.carrier.set_title('Carrier Wave in Time Domain')
+        self.carrier.set_xlabel('Time (s)')
+        self.carrier.set_ylabel('Amplitude')
 
-        if self.ampl != 0:
+        self.am.clear()
+        self.am.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.samples[2][:NUM_SAMPLES_TO_PLOT])
+        self.am.set_title('AM Wave in Time Domain')
+        self.am.set_xlabel('Time (s)')
+        self.am.set_ylabel('Amplitude')
+
+        self.am_fft.clear()
+        self.am_fft.set_title('AM Wave in Frequency Domain')
+        self.am_fft.set_xlabel('Frequency (Hz)')
+        self.am_fft.set_ylabel('PSD (dB)')
+
+        if any(self.samples[2]) != 0:
             # https://stackoverflow.com/questions/25735153/plotting-a-fast-fourier-transform-in-python
             # truncate the FFT
-            yf = fftpack.fft(self.sample[:self.sample_rate])
+            yf = fftpack.fft(self.samples[2][:self.sample_rate])
             d = len(yf) // 2
             yf = yf[:d-1]
             yp = np.abs(yf) ** 2
@@ -239,15 +157,16 @@ class StartPage(tk.Frame):
             i = (fft_freq>0)[:FFT_MAX_FREQ]
             fft_freq = fft_freq[:FFT_MAX_FREQ]
             yp = yp[:FFT_MAX_FREQ]
-            self.fft.plot(fft_freq[i], 10*np.log10(yp[i]))
-            self.fft.set_xlabel('Frequency (Hz)')
-            self.fft.set_ylabel('PSD (dB)')
+            self.am_fft.plot(fft_freq[i], 10*np.log10(yp[i]))
 
+        self.data.set(xlim=(0,0.010), ylim=(-1,1))
+        self.carrier.set(xlim=(0,0.010), ylim=(-1,1))
+        self.am.set(xlim=(0,0.010), ylim=(-1,1))
         self.canvas.draw()
-        sd.play(self.sample, self.sample_rate)
+        sd.play(self.samples[2], self.sample_rate)
 
 if __name__ == "__main__":
-    app = FixedFrequencyPlayer()
+    app = AmplitudeModulationPlayer()
 
     def on_closing():
         app.quit()
