@@ -4,7 +4,13 @@
 
 def main():
     print('Required Packages:')
-    print('\tnumpy\n\tpandas\n\tscipy\n\ttkinter\n\tpyaudio\n\tmatplotlib')
+    print('\tnumpy')
+    print('\tpandas')
+    print('\tscipy')
+    print('\ttkinter')
+    print('\tpyaudio')
+    print('\tmatplotlib')
+    print('\tsounddevice')
 
 if __name__ == '__main__':
     main()

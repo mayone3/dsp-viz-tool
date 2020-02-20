@@ -18,17 +18,18 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 import sounddevice as sd
+import mydsplib as mdl
 
 # GLOBAL PARAMETERS
 LARGE_FONT = ("Verdana", 12)
 # sample params
-SAMPLING_RATE = 44100
+SAMPLE_RATE = 44100
 DURATION = 2.0
 NUM_SAMPLES_TO_PLOT = 1000
 # filter params
 FILTER_ORDER = 3
-LOWPASS_FREQ = 440
-HIGHPASS_FREQ = 880
+CUTOFF = 1000
+BAND = [440, 880]
 WINDOW_SIZE = 51
 # fft params
 FFT_MAX_FREQ = 2000
@@ -67,7 +68,7 @@ class StartPage(tk.Frame):
         self.text_a = tk.Label(self, font=LARGE_FONT, text='Amplitudes!')
         self.amplitude_sliders = []
         for i in range(13):
-            self.amplitude_sliders.append(tk.Scale(self, orient=tk.VERTICAL, from_=1, to=0, digits=3, resolution=0.01, showvalue=False, command=lambda a, index=i: self.update_graph_ampl(a, index)))
+            self.amplitude_sliders.append(tk.Scale(self, orient=tk.VERTICAL, from_=1, to=0, digits=3, resolution=0.01, showvalue=False, command=lambda a, index=i: self.update_ampl(a, index)))
             self.amplitude_sliders[i].set(0.0)
         # Initialize to A minor chord because I want to die
         self.amplitude_sliders[0].set(1.0)
@@ -131,7 +132,7 @@ class StartPage(tk.Frame):
                                      command=lambda:self.update_filter_type("smoothing"))
 
         # Some internal states
-        self.samples = np.zeros((200, 1))
+        self.sample = np.zeros((200, 1))
         self.noise_type = 'none'
         self.noise_ampl = 0.5
         self.filter_type = 'none'
@@ -141,14 +142,16 @@ class StartPage(tk.Frame):
             self.ampl.append(self.amplitude_sliders[i].get())
             self.freq.append(440.0 * math.pow(2, i/12))
         self.volume = 0.8
-        self.low_cutoff = LOWPASS_FREQ
-        self.high_cutoff = HIGHPASS_FREQ
-        self.sampling_rate = SAMPLING_RATE # Hz
+        self.cutoff = CUTOFF
+        self.band = BAND
+        self.filter_order = FILTER_ORDER
+        self.window_size = WINDOW_SIZE
+        self.sample_rate = SAMPLE_RATE # Hz
         self.duration = DURATION # second
 
         # OTHER STUFF
-        self.n = np.arange(self.sampling_rate * self.duration)
-        self.time_axis = self.n / self.sampling_rate
+        self.n = np.arange(self.sample_rate * self.duration)
+        self.time_axis = self.n / self.sample_rate
         # print(self.n)
         # print(self.time_axis)
 
@@ -186,51 +189,6 @@ class StartPage(tk.Frame):
         self.canvas.get_tk_widget().grid(row=10, column=0, columnspan=13)
         self.canvas._tkcanvas.grid(row=11, column=0, columnspan=13)
 
-    def add_noise(self):
-        # Choose noise type
-        if self.noise_type == 'white':
-            # print(np.mean(signal.welch(self.white_noise())))
-            self.samples += self.white_noise()
-        elif self.noise_type == 'pink':
-            # print(np.mean(signal.welch(self.pink_noise() * 10)))
-            self.samples += self.pink_noise() * 10
-
-    def white_noise(self):
-        return self.noise_ampl * (np.random.random(int(self.sampling_rate * self.duration))*2-1).astype(np.float32)
-
-    '''
-    source: https://scicomp.stackexchange.com/questions/18987/algorithm-for-high-quality-1-f-noise
-    source: https://stackoverflow.com/questions/33933842/how-to-generate-noise-in-frequency-range-with-numpy
-    source*: https://www.dsprelated.com/showarticle/908.php
-    '''
-    def pink_noise(self, nrows=int(SAMPLING_RATE*DURATION), ncols=16):
-        """Generates pink noise using the Voss-McCartney algorithm.
-
-        nrows: number of values to generate
-        rcols: number of random sources to add
-
-        returns: NumPy array
-        """
-        array = np.empty([nrows, ncols])
-        array.fill(np.nan)
-        array[0, :] = np.random.random(ncols)
-        array[:, 0] = np.random.random(nrows)
-
-        # the total number of changes is nrows
-        n = nrows
-        cols = np.random.geometric(0.5, n)
-        cols[cols >= ncols] = 0
-        rows = np.random.randint(nrows, size=n)
-        array[rows, cols] = np.random.random(n)
-
-        df = pd.DataFrame(array)
-        df.fillna(method='ffill', axis=0, inplace=True)
-        total = df.sum(axis=1)
-
-        ret = total.values
-        ret /= ret.max()
-        return self.noise_ampl * ret
-
     def update_noise_type(self, t):
         self.noise_type = t
         self.text_ntype.configure(text='Noise type is '+t)
@@ -240,42 +198,6 @@ class StartPage(tk.Frame):
         self.noise_ampl = float(a)
         self.text_n.configure(text=('amp = ' + str(self.noise_ampl)))
         self.update_graph_handler()
-
-    def add_filter(self):
-        if self.filter_type == 'lowpass':
-            self.lowpass_filter()
-        elif self.filter_type == 'highpass':
-            self.highpass_filter()
-        elif self.filter_type == 'bandpass':
-            self.bandpass_filter()
-        elif self.filter_type == 'smoothing':
-            self.smoothing_filter()
-
-    def lowpass_filter(self):
-        nyq = self.sampling_rate * 0.5
-        low = self.low_cutoff / nyq
-        b, a = signal.butter(FILTER_ORDER, low, btype='lowpass')
-        y = signal.filtfilt(b, a, self.samples)
-        self.samples = y
-
-    def highpass_filter(self):
-        nyq = self.sampling_rate * 0.5
-        high = self.high_cutoff / nyq
-        b, a = signal.butter(FILTER_ORDER, high, btype='highpass')
-        y = signal.filtfilt(b, a, self.samples)
-        self.samples = y
-
-    def bandpass_filter(self):
-        nyq = self.sampling_rate * 0.5
-        low = self.low_cutoff / nyq
-        high = self.high_cutoff / nyq
-        b, a = signal.butter(FILTER_ORDER, [low, high], btype='band')
-        y = signal.filtfilt(b, a, self.samples)
-        self.samples = y
-
-    def smoothing_filter(self):
-        y = signal.savgol_filter(self.samples, WINDOW_SIZE, FILTER_ORDER)
-        self.samples = y
 
     def update_filter_type(self, t):
         self.filter_type=t
@@ -296,44 +218,35 @@ class StartPage(tk.Frame):
             print("\t0 <= low < high <= 2000\n")
             return
 
-        self.low_cutoff, self.high_cutoff = l, h
+        self.band = [l, h]
         self.update_graph_handler()
 
     def update_volume(self, v):
         self.volume = v
 
-    def update_graph_ampl(self, a, i):
+    def update_ampl(self, a, i):
         # update amplitudes
         self.ampl[i] = float(a)
         self.update_graph_handler()
 
-    def normalize_samples(self):
-        if self.samples.max() != 0:
-            self.samples /= self.samples.max()
-
-    def save_to_wav(self):
-        data = np.iinfo(np.int16).max * self.samples
-        samplerate = self.sampling_rate
-        wavfile.write("multi_freq.wav", samplerate, data)
-
     def update_graph_handler(self):
-        # update samples
-        self.samples = np.zeros(int(self.sampling_rate*self.duration)).astype(np.float32)
+        # update sample
+        self.sample = np.zeros(int(self.sample_rate*self.duration)).astype(np.float32)
         for i in range(13):
-            self.samples += self.ampl[i] * np.sin(2 * np.pi * self.freq[i] * self.time_axis).astype(np.float32)
+            self.sample += self.ampl[i] * np.sin(2 * np.pi * self.freq[i] * self.time_axis).astype(np.float32)
         if any(a > 0.0 for a in self.ampl):
-            self.samples /= self.samples.max() # normalize
-        self.add_noise()
-        self.add_filter()
-        self.normalize_samples()
-        # self.save_to_wav()
+            self.sample /= self.sample.max() # normalize
+        self.sample = mdl.add_noise(self.sample, self.noise_type, self.noise_ampl, self.sample_rate, self.duration)
+        self.sample = mdl.add_filter(self.sample, self.filter_type, self.cutoff, self.band, self.filter_order, self.window_size, self.sample_rate)
+        self.sample = mdl.normalize_sample(self.sample)
+        # mdl.save_to_wav(self.smaple, 'multi.wav', self.sample_rate)
         self.update_graph()
 
     def update_graph(self):
         # TODO: Make these plots look better
-        # print(self.ampl * self.samples[:10])
+        # print(self.ampl * self.sample[:10])
         self.a.clear()
-        self.a.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.samples[:NUM_SAMPLES_TO_PLOT])
+        self.a.plot(self.time_axis[:NUM_SAMPLES_TO_PLOT], self.sample[:NUM_SAMPLES_TO_PLOT])
         self.a.set_title('Time Domain Plot')
         self.a.set_xlabel('Time (s)')
         self.a.set_ylabel('Amplitude')
@@ -341,13 +254,10 @@ class StartPage(tk.Frame):
         self.fft.clear()
         self.fft.set_title('Frequency Domain Plot')
 
-        if any(s > 0.0 for s in self.samples):
-            yf = fftpack.fft(self.samples[:self.sampling_rate])
-            # d = len(yf)//2
-            # self.fft.plot(abs(yf[:(d-1)]))
-
+        if any(s > 0.0 for s in self.sample):
             # https://stackoverflow.com/questions/25735153/plotting-a-fast-fourier-transform-in-python
             # truncate the FFT
+            yf = fftpack.fft(self.sample[:self.sample_rate])
             d = len(yf) // 2
             yf = yf[:d-1]
             yp = np.abs(yf) ** 2
@@ -360,7 +270,7 @@ class StartPage(tk.Frame):
             self.fft.set_ylabel('PSD (dB)')
 
         self.canvas.draw()
-        sd.play(self.samples, self.sampling_rate)
+        sd.play(self.sample, self.sample_rate)
 
     def update_random(self):
         for i in range(13):

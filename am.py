@@ -63,7 +63,7 @@ class StartPage(tk.Frame):
 
     def __init__(self, parent, controller):
         # Initialize Plots
-        self.f, (self.a, self.fft) = plt.subplots(2, 1, figsize=(5, 6))
+        self.f, (self.a, self.fft) = plt.subplots(2, 2, figsize=(5, 6))
         self.f.tight_layout(pad=4.0)
         self.a.set(xlim=(0,0.010), ylim=(-1,1))
 
