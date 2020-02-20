@@ -27,7 +27,7 @@ SAMPLE_RATE = 44100
 DURATION = 2.0
 NUM_SAMPLES_TO_PLOT = 1000
 # fft params
-FFT_MAX_FREQ = 2000
+FFT_MAX_FREQ = 5000
 
 class FrequencyModulationPlayer(tk.Tk):
 
