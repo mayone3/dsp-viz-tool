@@ -95,9 +95,26 @@ def smoothing_filter(sample, window_size, filter_order):
 def am(sample_data, sample_carrier):
     return (sample_data+1) * sample_carrier
 
-def fm(sample_baseband, freq_carrier, freq_modulator):
+def fm(sample_baseband, ts, f_m, f_c, f_dev):
     # return am(sample_data, sample_carrier)
-    y = sin(2*np.pi*)
+    '''
+    https://en.wikipedia.org/wiki/Frequency_modulation
+
+    Frequency Modulation:
+        y(t) = A_c * cos( 2*pi * f_c * t + 2*pi * f_dev * int_0^t x_m(\tau) d\tau )
+
+    For sinusoid baseband signal:
+        int_0^t x_m(\tau) d\tau = A_m * sin( 2*pi * f_m * t ) / ( 2*pi * f_m )
+
+        y(t) = A_c * cos( 2*pi * f_c * t + ( A_m * f_dev / f_m ) * sin( 2*pi * f_m * t ) )
+
+    For simplicity, we have
+        A_c = 1, A_m = 1
+
+    Therefore,
+        y(t) = cos( 2*pi * f_c * t + ( f_dev / f_m ) * sin( 2*pi * f_m * t ) )
+    '''
+    return np.cos( 2*np.pi * f_c * ts + (f_dev / f_m) * np.sin( 2*pi * f_m * ts ) ).astyle(np.float32)
 
 def normalize_sample(sample):
     if sample.max() != 0:

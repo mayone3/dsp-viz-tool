@@ -102,9 +102,9 @@ class StartPage(tk.Frame):
 
     def update_graph_handler(self):
         # update samples
-        self.samples[0] = np.sin(2*np.pi*self.f[0]*self.time_axis).astype(np.float32)
-        self.samples[1] = np.sin(2*np.pi*self.f[1]*self.time_axis).astype(np.float32)
-        self.samples[2] = mdl.fm(self.samples[0], self.f[1], self.f[2])
+        self.samples[0] = np.sin(2*np.pi*self.f[0]*self.time_axis).astype(np.float32) # baseband
+        self.samples[1] = np.sin(2*np.pi*self.f[1]*self.time_axis).astype(np.float32) # carrier
+        self.samples[2] = mdl.fm(self.samples[0], self.time_axis, self.f[0], self.f[1], self.f[2])
         if self.samples[2].max() > 1.0:
             self.samples[2] = mdl.normalize_sample(self.samples[2])
         self.update_graph()
