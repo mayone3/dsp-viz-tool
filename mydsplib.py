@@ -92,8 +92,11 @@ def bandpass_filter(sample, band, sample_rate, filter_order):
 def smoothing_filter(sample, window_size, filter_order):
     return signal.savgol_filter(sample, window_size, filter_order)
 
-def am(sample_data, sample_carrier):
-    return (sample_data+1) * sample_carrier
+def am(sample_data, sample_carrier, a_c):
+    if a_c != 0:
+        return (1 + sample_data/a_c) * sample_carrier
+    else:
+        return sample_carrier
 
 '''
 https://en.wikipedia.org/wiki/Frequency_modulation

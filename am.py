@@ -27,7 +27,7 @@ SAMPLE_RATE = 44100
 DURATION = 2.0
 NUM_SAMPLES_TO_PLOT = 1000
 # fft params
-FFT_MAX_FREQ = 2000
+FFT_MAX_FREQ = 3000
 
 class AmplitudeModulationPlayer(tk.Tk):
 
@@ -117,7 +117,7 @@ class StartPage(tk.Frame):
         # update samples
         self.samples[0] = self.a[0] * np.sin(2*np.pi*self.f[0]*self.time_axis).astype(np.float32)
         self.samples[1] = self.a[1] * np.sin(2*np.pi*self.f[1]*self.time_axis).astype(np.float32)
-        self.samples[2] = mdl.am(self.samples[0], self.samples[1])
+        self.samples[2] = mdl.am(self.samples[0], self.samples[1], self.a[1])
         if self.samples[2].max() > 1.0:
             self.samples[2] = mdl.normalize_sample(self.samples[2])
         self.update_graph()
@@ -159,9 +159,9 @@ class StartPage(tk.Frame):
             yp = yp[:FFT_MAX_FREQ]
             self.am_fft.plot(fft_freq[i], 10*np.log10(yp[i]))
 
-        self.data.set(xlim=(0,0.010), ylim=(-1,1))
-        self.carrier.set(xlim=(0,0.010), ylim=(-1,1))
-        self.am.set(xlim=(0,0.010), ylim=(-1,1))
+        self.data.set(xlim=(0,0.020), ylim=(-1,1))
+        self.carrier.set(xlim=(0,0.020), ylim=(-1,1))
+        self.am.set(xlim=(0,0.020), ylim=(-1,1))
         self.canvas.draw()
         sd.play(self.samples[2], self.sample_rate)
 

@@ -65,9 +65,9 @@ class StartPage(tk.Frame):
         self.text_fmdev = tk.Label(self, font=LARGE_FONT, text='FM Deviation (Hz)')
         frequency_sliders = []
         frequency_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=50, to=1000, digits=3, resolution=25, showvalue=True, command=lambda f: self.update_freq(f, 0)))
-        frequency_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=600, to=1000, digits=4, resolution=10, showvalue=True, command=lambda f: self.update_freq(f, 1)))
-        frequency_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=1, to=440, digits=3, resolution=10, showvalue=True, command=lambda f: self.update_freq(f, 2)))
-        frequency_sliders[0].set(400)
+        frequency_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=600, to=1000, digits=4, resolution=20, showvalue=True, command=lambda f: self.update_freq(f, 1)))
+        frequency_sliders.append(tk.Scale(self, orient=tk.HORIZONTAL, from_=0, to=500, digits=3, resolution=25, showvalue=True, command=lambda f: self.update_freq(f, 2)))
+        frequency_sliders[0].set(200)
         frequency_sliders[1].set(800)
         frequency_sliders[2].set(100)
 
@@ -104,9 +104,7 @@ class StartPage(tk.Frame):
         # update samples
         self.samples[0] = np.sin(2*np.pi*self.f[0]*self.time_axis).astype(np.float32) # baseband
         self.samples[1] = np.sin(2*np.pi*self.f[1]*self.time_axis).astype(np.float32) # carrier
-        self.samples[2] = mdl.fm(self.samples[0], self.time_axis, self.f[0], self.f[1], self.f[2])
-        if self.samples[2].max() > 1.0:
-            self.samples[2] = mdl.normalize_sample(self.samples[2])
+        self.samples[2] = mdl.fm(self.samples[0], self.time_axis, self.f[0], self.f[1], self.f[2]) # FM wave
         self.update_graph()
 
     def update_graph(self):
