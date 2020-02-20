@@ -1,3 +1,3 @@
-# DSP Visualization Tool for Prof. Lynford Goddard
+# Audio DSP Visualization Tool
 
 https://ece.illinois.edu/directory/profile/lgoddard
