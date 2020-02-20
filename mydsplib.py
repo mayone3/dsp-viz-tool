@@ -5,6 +5,7 @@ import pandas as pd
 from scipy import fftpack
 from scipy import signal
 from scipy.io import wavfile
+import heapq
 
 # audio params
 SAMPLE_RATE = 44100
@@ -120,6 +121,26 @@ def fm(sample_baseband, ts, f_m, f_c, f_dev):
         y(t) = cos( 2*pi * f_c * t + ( f_dev / f_m ) * sin( 2*pi * f_m * t ) )
     '''
     return np.cos( 2*np.pi * f_c * ts + (f_dev / f_m) * np.sin( 2*np.pi * f_m * ts ) ).astype(np.float32)
+
+def compress(sample, quality, sample_rate, time_axis):
+    if any(sample) != 0:
+        # https://stackoverflow.com/questions/25735153/plotting-a-fast-fourier-transform-in-python
+        # truncate the FFT
+        yf = fftpack.fft(sample[:sample_rate])
+        d = len(yf) // 2
+        yf = yf[:d-1]
+        yp = np.abs(yf) ** 2
+        fft_freq = fftpack.fftfreq(len(yp), 1/len(yp))
+        pos = (fft_freq>0)
+        lst = pd.Series(yp[pos])
+        i = lst.nlargest(quality)
+        fs = i.index.values.tolist()
+        compressed = np.zeros(len(sample)).astype(np.float32)
+        for f in fs:
+            compressed += np.sin(2*np.pi * f * time_axis).astype(np.float32)
+        compressed /= compressed.max()
+        return compressed
+    return sample
 
 def normalize_sample(sample):
     if sample.max() != 0:
