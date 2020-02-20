@@ -95,10 +95,12 @@ def smoothing_filter(sample, window_size, filter_order):
 def am(sample_data, sample_carrier):
     return (sample_data+1) * sample_carrier
 
+'''
+https://en.wikipedia.org/wiki/Frequency_modulation
+'''
 def fm(sample_baseband, ts, f_m, f_c, f_dev):
     # return am(sample_data, sample_carrier)
     '''
-    https://en.wikipedia.org/wiki/Frequency_modulation
 
     Frequency Modulation:
         y(t) = A_c * cos( 2*pi * f_c * t + 2*pi * f_dev * int_0^t x_m(\tau) d\tau )
