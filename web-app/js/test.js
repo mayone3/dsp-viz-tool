@@ -16,3 +16,5 @@ console.log(f.toString())
 console.log(n.toString())
 console.log(t.toString())
 console.log(sample.toString())
+
+document.getElementById("mySample").innerHTML = sample.toString()
