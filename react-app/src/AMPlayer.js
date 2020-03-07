@@ -36,7 +36,14 @@ class AMPlayer extends React.Component {
     constructor() {
         super()
         this.state = {
-
+            pi: 3.14159265359,
+            samplerate: 44100.0,
+            duration: 1.0,
+            a: 1.0,
+            f: 440.0,
+            numPoints: 250,
+            n: nj.arange(samplerate * duration, 'float64'),
+            t: n.divide(samplerate),
         }
     }
 
@@ -44,6 +51,9 @@ class AMPlayer extends React.Component {
         return (
             <div>
                 <h1>AMPlayer</h1>
+                <div>samplerate = {this.state.samplerate}</div>
+                <div>amplitude = {this.state.a}</div>
+                <div>frequency = {this.state.f}</div>
             </div>
         )
     }
