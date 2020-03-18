@@ -1,62 +1,72 @@
 import React from 'react'
 import DSP from './dsp'
-
-// var pi = 3.1415926535897932384626
-// var samplerate = 44100.0
-// var duration = 1.0
-// var a = 1.0
-// var f = 440.0
-// var numPoints = 250
-// var n = nj.arange(samplerate * duration, 'float64')
-// var t = n.divide(samplerate)
-//
-// var sample = nj.sin(t.multiply(2*pi*f))
-//
-// var sampleFrequencyDomainPlot = document.getElementById('sample-frequency-domain-plot');
-// var sampleFrequencyDomainData = [{
-//     x: t.tolist().slice(0,numPoints),
-//     y: sample.tolist().slice(0,numPoints)
-// }]
-// var sampleFrequencyDomainLayout = {
-//     yaxis: {
-//         range: [-1.1, 1.1]
-//     },
-//     margin: {
-//         t: 0
-//     }
-// }
-//
-// Plotly.newPlot(
-//     sampleFrequencyDomainPlot,
-//     sampleFrequencyDomainData,
-//     sampleFrequencyDomainLayout
-// );
+import Plot from 'react-plotly.js'
 
 class AMPlayer extends React.Component {
-    constructor() {
-        super()
-        this.state = {
-            pi: 3.14159265359,
-            samplerate: 44100.0,
-            duration: 1.0,
-            a: 1.0,
-            f: 440.0,
-            numPoints: 250,
-            n: nj.arange(samplerate * duration, 'float64'),
-            t: n.divide(samplerate),
-        }
+  constructor() {
+    super()
+    this.state = {
+      a: 1.0,
+      f: 440.0,
+      bufferSize: 8192,
+      sampleRate: 44100,
+      numPoints: 1000,
+    }
+  }
+
+  getTimeDomainData() {
+    var _x = new Float64Array(this.state.sampleRate).fill(0)
+    var _y = new Float64Array(this.state.sampleRate).fill(0)
+
+    for (let i = 0; i < this.state.sampleRate; ++i) {
+      _x[i] = i/this.state.sampleRate
+      _y[i] = this.state.a * Math.sin(2 * Math.PI * this.state.f * _x[i])
     }
 
-    render() {
-        return (
-            <div>
-                <h1>AMPlayer</h1>
-                <div>samplerate = {this.state.samplerate}</div>
-                <div>amplitude = {this.state.a}</div>
-                <div>frequency = {this.state.f}</div>
-            </div>
-        )
+    return ({
+      x: _x,
+      y: _y
+    })
+  }
+
+  render() {
+    var timeData = this.getTimeDomainData()
+    var fft = new DSP.FFT(this.state.bufferSize, this.state.sampleRate)
+    fft.forward(timeData.y.slice(0, this.state.bufferSize))
+    var fy = fft.spectrum
+    var fx = Array(fy.length).fill(0)
+
+    for (let i = 0; i < fx.length; ++i) {
+      fx[i] = this.state.sampleRate / this.state.bufferSize * i
+      // fy[i] = fy[i] * -1 * Math.log((fft.bufferSize/2 - i) * (0.5/fft.bufferSize/2)) * fft.bufferSize
     }
+
+    return (
+      <div>
+        <h1>AMPlayer</h1>
+        <div>Amplitude = {this.state.a}</div>
+        <div>Frequency = {this.state.f}</div>
+        <Plot
+          data={[
+            {
+              x: timeData.x.slice(0, this.state.numPoints-1),
+              y: timeData.y.slice(0, this.state.numPoints-1),
+            }
+          ]}
+          layout={ {width: 640, height: 480, title: 'Time Domain'} }
+        />
+        <Plot
+          data={[
+            {
+              x: fx.slice(0, 2100/(this.state.sampleRate/this.state.bufferSize)),
+              y: fy.slice(0, 2100/(this.state.sampleRate/this.state.bufferSize))
+            }
+          ]}
+          layout={ {width: 640, height: 480, title: 'Frequency Domain'} }
+        />
+      </div>
+    )
+  }
 }
 
 export default AMPlayer
