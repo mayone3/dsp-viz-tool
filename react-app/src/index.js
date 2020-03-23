@@ -7,55 +7,76 @@ import FMPlayer from "./FMPlayer"
 import FixedFreqPlayer from "./FixedFreqPlayer"
 import MultiFreqPlayer from "./MultiFreqPlayer"
 
+import './App.css'
+
 class App extends React.Component {
   constructor() {
     super()
     this.state = {
       appList: [
-        'FixedFreqPlayer',
-        'MultiFreqPlayer',
-        'AMPlayer',
-        'FMPlayer',
+        'Fixed Frequency Player',
+        'Multi Frequency Player',
+        'AM Player',
+        'FM Player',
       ],
-      currApp: 0
+      currApp: 3
     }
   }
 
   getCurrApp() {
-    if (this.state.appList[this.state.currApp] === 'FixedFreqPlayer') {
+    if (this.state.appList[this.state.currApp] === 'Fixed Frequency Player') {
       return <FixedFreqPlayer />
-    } else if (this.state.appList[this.state.currApp] === 'MultiFreqPlayer') {
+    } else if (this.state.appList[this.state.currApp] === 'Multi Frequency Player') {
       return <MultiFreqPlayer />
-    } else if (this.state.appList[this.state.currApp] === 'AMPlayer') {
+    } else if (this.state.appList[this.state.currApp] === 'AM Player') {
       return <AMPlayer />
-    } else if (this.state.appList[this.state.currApp] === 'FMPlayer') {
+    } else if (this.state.appList[this.state.currApp] === 'FM Player') {
       return <FMPlayer />
     } else {
       return <div>ERROR</div>
     }
   }
 
-  handleClick() {
-    this.setState((prevState) => {
-      let nextApp = (prevState.currApp + 1) % (prevState.appList.length)
-      return {
-        currApp: nextApp
-      }
-    });
+  handleClick(event) {
+    console.log("clicked")
+    if (event.target.id === "button-next-app") {
+      this.setState((prevState) => {
+        let nextApp = (prevState.currApp + 1) % (prevState.appList.length)
+        return {
+          currApp: nextApp
+        }
+      });
+    } else if (event.target.id === "button-prev-app") {
+      this.setState((prevState) => {
+        let nextApp = (prevState.currApp > 0) ? (prevState.currApp - 1) : (prevState.currApp + prevState.appList.length - 1)
+        return {
+          currApp: nextApp
+        }
+      });
+    }
   }
 
   render() {
     return (
       <div>
-        <link
-          rel="stylesheet"
-          href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css"
-          integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4"
-          crossOrigin="anonymous"
-        />
-        <div>Current App is {this.state.appList[this.state.currApp]}</div>
-        <button onClick={() => this.handleClick()}>NEXT</button>
-        {this.getCurrApp()}
+        <div className="container">
+          <div className="row website-header">
+            <div className="col-sm text-center">
+              <button id="button-prev-app" className="btn btn-dark" onClick={(event) => this.handleClick(event)}>
+                <div className="text-btn">prev</div>
+              </button>
+            </div>
+            <div className="col-lg text-center">
+              <div className="app-name">{this.state.appList[this.state.currApp]}</div>
+            </div>
+            <div className="col-sm text-center">
+              <button id="button-next-app" className="btn btn-dark" onClick={(event) => this.handleClick(event)}>
+                <div className="text-btn">next</div>
+              </button>
+            </div>
+          </div>
+          {this.getCurrApp()}
+        </div>
       </div>
     )
   }

@@ -6,9 +6,9 @@ class MultiFreqPlayer extends React.Component {
   constructor() {
     super()
     this.state = {
-      a: [1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+      a: [1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0],
       f: [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88, 523.25],
-      bufferSize: 8192,
+      bufferSize: 8192, // FFT
       sampleRate: 44100,
       numPoints: 1000,
     }
@@ -45,11 +45,15 @@ class MultiFreqPlayer extends React.Component {
     this.setState({
       a: _a
     })
-    
-    this.playAudio()
+
+    // this.playAudio()
   }
 
-  playAudio() {
+  stopAudio() {
+    // console.log(window.AudioContext)
+  }
+
+  startAudio() {
     var arr = this.getTimeDomainData().y
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
     var context = new AudioContext();
@@ -61,6 +65,11 @@ class MultiFreqPlayer extends React.Component {
     source.buffer = buffer;
     source.connect(context.destination);
     source.start(0);
+  }
+
+  playAudio() {
+    // this.stopAudio();
+    this.startAudio();
   }
 
   render() {
@@ -78,54 +87,108 @@ class MultiFreqPlayer extends React.Component {
     var fmax = 825
 
     return (
-      <div>
-        <h1>MultiFreqPlayer</h1>
-        <div className="row justify-content-center">
+      <div className="app-container">
+        <div className="row text-center app-row">
           <div className="col-sm">
-            <input id="multifreq-0" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[0]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">C</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-1" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[1]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">C#</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-2" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[2]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">D</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-3" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[3]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">D#</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-4" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[4]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">E</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-5" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[5]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">F</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-6" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[6]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">F#</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-7" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[7]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">G</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-8" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[8]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">G#</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-9" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[9]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">A</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-10" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[10]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">A#</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-11" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[11]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">B</div>
           </div>
           <div className="col-sm">
-            <input id="multifreq-12" className="custom-range no-border" type="range" onChange={event => this.handleChange(event)} value={this.state.a[12]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+            <div className="text-key">C</div>
           </div>
         </div>
-        <div className="row justify-content-center">
-          <button onClick={event => this.playAudio(event)}>PLAY AUDIO</button>
+        <div className="row text-center app-row">
+        {
+          // empty row cuz im lazy
+        }
         </div>
-        <div className="row justify-content-center">
+        <div className="row text-center app-row">
           <div className="col-sm">
+            <input id="multifreq-0" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[0]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-1" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[1]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-2" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[2]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-3" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[3]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-4" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[4]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-5" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[5]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-6" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[6]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-7" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[7]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-8" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[8]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-9" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[9]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-10" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[10]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-11" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[11]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+          <div className="col-sm">
+            <input id="multifreq-12" className="custom-range no-border vslider" type="range" onChange={event => this.handleChange(event)} value={this.state.a[12]} min="0.0" max="1.0" step="0.1" orientation="vertical" />
+          </div>
+        </div>
+        <div className="row text-center app-row">
+        {
+          // empty row cuz im lazy
+        }
+        </div>
+        <div className="row text-center app-row">
+          <div className="col-sm">
+            <button className="btn btn-dark" onClick={event => this.playAudio(event)}>
+              <div className="text-btn">play</div>
+            </button>
+          </div>
+        </div>
+        <div className="row text-center app-row">
+          <div className="col-md text-center">
             <Plot
               data={[
                 {
@@ -133,10 +196,10 @@ class MultiFreqPlayer extends React.Component {
                   y: timeData.y.slice(0, this.state.numPoints-1),
                 }
               ]}
-              layout={ {width: 640, height: 480, title: 'Time Domain'} }
+              layout={ {width: 480, height: 320, yaxis: {range: [-1, 1]}, title: 'Time Domain', margin: 0} }
             />
           </div>
-          <div className="col-sm">
+          <div className="col-md text-center">
             <Plot
               data={[
                 {
@@ -144,7 +207,7 @@ class MultiFreqPlayer extends React.Component {
                   y: fy.slice(0, fmax/(this.state.sampleRate/this.state.bufferSize))
                 }
               ]}
-              layout={ {width: 640, height: 480, title: 'Frequency Domain'} }
+              layout={ {width: 480, height: 320, yaxis: {range: [-1, 1]}, title: 'Frequency Domain', margin: 0} }
             />
           </div>
         </div>

@@ -1,3 +1,38 @@
-.multifreq-slider {
-  padding: 0px;
+@import url('https://fonts.googleapis.com/css?family=Roboto+Mono:300,300i,400,400i,500,500i&display=swap');
+
+.app-name {
+  color: #000;
+  font-family: 'Roboto-Mono', monospace;
+}
+
+.text-data {
+  color: #000;
+  font-family: 'Roboto-Mono', monospace;
+}
+
+.text-btn {
+  color: #fff;
+  font-family: 'Roboto-Mono', monospace;
+}
+
+.text-key {
+  color: #000;
+  font-family: 'Roboto-Mono', monospace;
+}
+
+.app-container {
+  margin: 10px;
+}
+
+.website-header {
+  margin: 10px;
+}
+
+.app-row {
+  margin: 10px;
+}
+
+.vslider {
+  /* transform: rotate(270deg); */
+  /* -moz-transform: rotate(270deg); */
 }

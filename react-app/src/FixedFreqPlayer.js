@@ -6,9 +6,11 @@ class FixedFreqPlayer extends React.Component {
   constructor() {
     super()
     this.state = {
-      a: 1.0,
-      f: 440.0,
-      bufferSize: 8192,
+      aArr: [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+      aIdx: 10,
+      fArr: [261.63, 277.18, 293.66, 311.13, 329.63, 349.23, 369.99, 392.00, 415.30, 440.00, 466.16, 493.88, 523.25],
+      fIdx: 0,
+      bufferSize: 8192, // FFT
       sampleRate: 44100,
       numPoints: 1000,
     }
@@ -18,9 +20,12 @@ class FixedFreqPlayer extends React.Component {
     var _x = new Float64Array(this.state.sampleRate).fill(0)
     var _y = new Float64Array(this.state.sampleRate).fill(0)
 
+    let a = this.state.aArr[this.state.aIdx]
+    let f = this.state.fArr[this.state.fIdx]
+
     for (let i = 0; i < this.state.sampleRate; ++i) {
       _x[i] = i/this.state.sampleRate
-      _y[i] = this.state.a * Math.sin(2 * Math.PI * this.state.f * _x[i])
+      _y[i] = a * Math.sin(2 * Math.PI * f * _x[i])
     }
 
     return ({
@@ -33,31 +38,35 @@ class FixedFreqPlayer extends React.Component {
     if (event.target.id === "inca") {
       this.setState((prevState) => {
         return {
-          a: prevState.a >= 0.9 ? prevState.a : prevState.a + 0.1
+          aIdx: prevState.aIdx >= prevState.aArr.length - 1 ? prevState.aIdx : prevState.aIdx + 1
         }
       })
     } else if (event.target.id === "deca") {
       this.setState((prevState) => {
         return {
-          a: prevState.a <= 0.1 ? prevState.a : prevState.a - 0.1
+          aIdx: prevState.aIdx <= 0 ? prevState.aIdx : prevState.aIdx - 1
         }
       })
     } else if (event.target.id === "incf") {
       this.setState((prevState) => {
         return {
-          f: prevState.f >= 4000 ? prevState.f : Math.round(prevState.f * 1.1)
+          fIdx: prevState.fIdx >= prevState.fArr.length - 1 ? prevState.fIdx : prevState.fIdx + 1
         }
       })
     } else if (event.target.id === "decf") {
       this.setState((prevState) => {
         return {
-          f: prevState.f <= 20 ? prevState.f : Math.round(prevState.f / 1.1)
+          fIdx: prevState.fIdx <= 0 ? prevState.fIdx : prevState.fIdx - 1
         }
       })
     }
   }
 
-  playAudio() {
+  stopAudio() {
+    // console.log(window.AudioContext)
+  }
+
+  startAudio() {
     var arr = this.getTimeDomainData().y
     window.AudioContext = window.AudioContext || window.webkitAudioContext;
     var context = new AudioContext();
@@ -69,6 +78,11 @@ class FixedFreqPlayer extends React.Component {
     source.buffer = buffer;
     source.connect(context.destination);
     source.start(0);
+  }
+
+  playAudio() {
+    // this.stopAudio();
+    this.startAudio();
   }
 
   render() {
@@ -83,38 +97,51 @@ class FixedFreqPlayer extends React.Component {
       // fy[i] = fy[i] * -1 * Math.log((fft.bufferSize/2 - i) * (0.5/fft.bufferSize/2)) * fft.bufferSize
     }
 
-    var fmax = Math.max(2000, this.state.f) * 1.1
+    var fmax = 825
 
     return (
-      <div>
-        <h1>FixedFreqPlayer</h1>
-        <div>Amplitude = {this.state.a.toFixed(1)}
-          <button id="inca" type="button" onClick={event => this.handleClick(event)}>+</button>
-          <button id="deca" type="button" onClick={event => this.handleClick(event)}>-</button>
+      <div className="app-container">
+        <div className="row text-center app-row">
+          <div className="col-md text-center">
+            <div className="text-data">Amplitude<br/>{this.state.aArr[this.state.aIdx]}</div>
+            <button id="inca" type="button" className="btn btn-dark" onClick={event => this.handleClick(event)}>+</button>
+            <button id="deca" type="button" className="btn btn-dark" onClick={event => this.handleClick(event)}>-</button>
+          </div>
+          <div className="col-md text-center">
+            <div className="text-data">Frequency(Hz)<br/>{this.state.fArr[this.state.fIdx]}</div>
+            <button id="incf" type="button" className="btn btn-dark" onClick={event => this.handleClick(event)}>+</button>
+            <button id="decf" type="button" className="btn btn-dark" onClick={event => this.handleClick(event)}>-</button>
+          </div>
+          <div className="col-sm text-center">
+            <button className="btn btn-dark" onClick={event => this.playAudio(event)}>
+              <div className="text-btn">play</div>
+            </button>
+          </div>
         </div>
-        <div>Frequency = {this.state.f}
-          <button id="incf" type="button" onClick={event => this.handleClick(event)}>+</button>
-          <button id="decf" type="button" onClick={event => this.handleClick(event)}>-</button>
+        <div className="row text-center app-row">
+          <div className="col-md text-center">
+            <Plot
+              data={[
+                {
+                  x: timeData.x.slice(0, this.state.numPoints-1),
+                  y: timeData.y.slice(0, this.state.numPoints-1),
+                }
+              ]}
+              layout={ {width: 480, height: 320, yaxis: {range: [-1, 1]}, title: 'Time Domain', margin: 0} }
+            />
+          </div>
+          <div className="col-md text-center">
+            <Plot
+              data={[
+                {
+                  x: fx.slice(0, fmax/(this.state.sampleRate/this.state.bufferSize)),
+                  y: fy.slice(0, fmax/(this.state.sampleRate/this.state.bufferSize))
+                }
+              ]}
+              layout={ {width: 480, height: 320, yaxis: {range: [-1, 1]}, title: 'Frequency Domain', margin: 0} }
+            />
+          </div>
         </div>
-        <button onClick={event => this.playAudio(event)}>PLAY</button>
-        <Plot
-          data={[
-            {
-              x: timeData.x.slice(0, this.state.numPoints-1),
-              y: timeData.y.slice(0, this.state.numPoints-1),
-            }
-          ]}
-          layout={ {width: 640, height: 480, title: 'Time Domain'} }
-        />
-        <Plot
-          data={[
-            {
-              x: fx.slice(0, fmax/(this.state.sampleRate/this.state.bufferSize)),
-              y: fy.slice(0, fmax/(this.state.sampleRate/this.state.bufferSize))
-            }
-          ]}
-          layout={ {width: 640, height: 480, title: 'Frequency Domain'} }
-        />
       </div>
     )
   }
